@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>தமிழ் சந்தச் சொல் தேடலி</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h2>தமிழ் சந்தச் சொல் தேடலி ✍️</h2>
+        <p class="subtitle">ஒரு சொல்லைத் தட்டச்சு செய்து எதுகை, மோனை, இயைபுச் சொற்களைக் கண்டறியவும்.</p>
+
+        <!-- Search Input -->
+        <div class="search-box">
+            <input type="text" id="wordInput" placeholder="எ.கா: தமிழ், மலர், நிலவு..." autocomplete="off">
+            <button onclick="findRhymes()">தேடு</button>
+        </div>
+
+        <!-- Results Display -->
+        <div id="results" class="results-container">
+            
+            <div class="result-group">
+                <h3>எதுகை சொற்கள் <small>(இரண்டாம் எழுத்து ஒன்றி வருவது)</small></h3>
+                <div id="edhugaiTags" class="tag-box">
+                    <span class="placeholder-text">சொல்லை உள்ளிட்டு 'தேடு' அழுத்தவும்...</span>
+                </div>
+            </div>
+
+            <div class="result-group">
+                <h3>மோனை சொற்கள் <small>(முதல் எழுத்து ஒன்றி வருவது)</small></h3>
+                <div id="monaiTags" class="tag-box">
+                    <span class="placeholder-text">சொல்லை உள்ளிட்டு 'தேடு' அழுத்தவும்...</span>
+                </div>
+            </div>
+
+            <div class="result-group">
+                <h3>இயைபு சொற்கள் <small>(இறுதி எழுத்து ஒன்றி வருவது)</small></h3>
+                <div id="iyaibuTags" class="tag-box">
+                    <span class="placeholder-text">சொல்லை உள்ளிட்டு 'தேடு' அழுத்தவும்...</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
