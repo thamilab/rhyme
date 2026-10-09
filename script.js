@@ -1,15 +1,26 @@
-// தமிழ் எழுத்துக்களைப் பிரித்தெடுக்கும் உதவிகள்
+// தமிழ் உயிர்மெய் எழுத்துக்களைச் சரியாகப் பிரித்தெடுக்கும் செயல்பாடு
+function splitTamilWords(word) {
+    // Intl.Segmenter தமிழ் போன்ற காம்ப்ளக்ஸ் எழுத்துக்களைச் சரியாகப் பிரிக்கும்
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+        const segmenter = new Intl.Segmenter('ta', { granularity: 'grapheme' });
+        return Array.from(segmenter.segment(word)).map(s => s.segment);
+    }
+    // பழைய பிரவுசர்களுக்கான மாற்று வழி
+    return Array.from(word);
+}
+
 function getFirstChar(word) {
-    return Array.from(word)[0] || "";
+    const chars = splitTamilWords(word);
+    return chars.length > 0 ? chars[0] : "";
 }
 
 function getSecondChar(word) {
-    const chars = Array.from(word);
+    const chars = splitTamilWords(word);
     return chars.length > 1 ? chars[1] : "";
 }
 
 function getLastChar(word) {
-    const chars = Array.from(word);
+    const chars = splitTamilWords(word);
     return chars.length > 0 ? chars[chars.length - 1] : "";
 }
 
@@ -23,8 +34,8 @@ async function findRhymes() {
     }
 
     try {
-        // JSON கோப்பில் இருந்து சொற்களைப் பெறுதல்
-        const response = await fetch('words.json');
+        // words.json கோப்பில் இருந்து தரவை எடுத்தல் (Cache தவிர்ப்பதற்காக ?v= விதியை இணைத்துள்ளோம்)
+        const response = await fetch('words.json?v=' + new Date().getTime());
         const dictionary = await response.json();
 
         const firstChar = getFirstChar(inputWord);
@@ -36,25 +47,30 @@ async function findRhymes() {
         let iyaibuList = [];
 
         dictionary.forEach(word => {
-            if (word === inputWord) return; // அதே சொல்லைத் தவிர்க்க
+            // அதே சொல்லைத் தவிர்க்க
+            if (word.trim() === inputWord) return;
 
-            // 1. எதுகை (இரண்டாம் எழுத்து match)
-            if (secondChar && getSecondChar(word) === secondChar) {
+            const wFirst = getFirstChar(word);
+            const wSecond = getSecondChar(word);
+            const wLast = getLastChar(word);
+
+            // 1. எதுகை (இரண்டாம் எழுத்து பொருந்துவது)
+            if (secondChar && wSecond === secondChar) {
                 edhugaiList.push(word);
             }
 
-            // 2. மோனை (முதல் எழுத்து match)
-            if (firstChar && getFirstChar(word) === firstChar) {
+            // 2. மோனை (முதல் எழுத்து பொருந்துவது)
+            if (firstChar && wFirst === firstChar) {
                 monaiList.push(word);
             }
 
-            // 3. இயைபு (கடைசி எழுத்து match)
-            if (lastChar && getLastChar(word) === lastChar) {
+            // 3. இயைபு (கடைசி எழுத்து பொருந்துவது)
+            if (lastChar && wLast === lastChar) {
                 iyaibuList.push(word);
             }
         });
 
-        // பட்டைகளாக (Tags) திரையில் காட்டுதல்
+        // முடிவுகளைத் திரையில் காட்டுதல்
         renderTags('edhugaiTags', edhugaiList);
         renderTags('monaiTags', monaiList);
         renderTags('iyaibuTags', iyaibuList);
@@ -73,7 +89,10 @@ function renderTags(elementId, words) {
         return;
     }
 
-    words.forEach(word => {
+    // ஒரே சொல் மீண்டும் வராமல் இருக்க (Unique words only)
+    const uniqueWords = [...new Set(words)];
+
+    uniqueWords.forEach(word => {
         const tag = document.createElement('span');
         tag.className = 'tag';
         tag.textContent = word;
