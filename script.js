@@ -1,11 +1,12 @@
-// தமிழ் உயிர்மெய் எழுத்துக்களைச் சரியாகப் பிரித்தெடுக்கும் செயல்பாடு
+
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxA1Aee4W5FooxDHb2Gvh2TVvQRrBjTkjn3kpNTMoRc52DXdN2ep6307BQQY5-_hHq-tyL7lPRXrtf/pub?output=csv';
+
+// தமிழ் உயிர்மெய் எழுத்துக்களைப் பிரிக்கும் செயல்பாடு
 function splitTamilWords(word) {
-    // Intl.Segmenter தமிழ் போன்ற காம்ப்ளக்ஸ் எழுத்துக்களைச் சரியாகப் பிரிக்கும்
     if (typeof Intl !== 'undefined' && Intl.Segmenter) {
         const segmenter = new Intl.Segmenter('ta', { granularity: 'grapheme' });
         return Array.from(segmenter.segment(word)).map(s => s.segment);
     }
-    // பழைய பிரவுசர்களுக்கான மாற்று வழி
     return Array.from(word);
 }
 
@@ -24,6 +25,28 @@ function getLastChar(word) {
     return chars.length > 0 ? chars[chars.length - 1] : "";
 }
 
+// Google Sheet-இல் இருந்து தரவைப் பெறுதல்
+async function fetchWordsFromGoogleSheet() {
+    try {
+        const response = await fetch(GOOGLE_SHEET_CSV_URL + '&v=' + new Date().getTime());
+        const csvText = await response.text();
+        
+        // CSV-இல் உள்ள வரிகளைப் பிரித்து சொற்களை மட்டும் எடுக்கிறது
+        const rows = csvText.split('\n');
+        const dictionary = rows.map(row => {
+            const columns = row.split(',');
+            // 2-வது பத்தியில் (Column B) சொல் இருந்தால் அதை எடுக்கும், இல்லை என்றால் 1-வது பத்தி
+            const word = columns[1] ? columns[1] : columns[0];
+            return word ? word.replace(/["\r\n]/g, '').trim() : '';
+        }).filter(word => word !== '' && word !== 'Timestamp' && word !== 'புதிய தமிழ் சொல்');
+
+        return dictionary;
+    } catch (error) {
+        console.error("Google Sheet-இல் இருந்து தரவை எடுப்பதில் பிழை:", error);
+        return [];
+    }
+}
+
 // தேடல் செயல்பாடு
 async function findRhymes() {
     const inputWord = document.getElementById('wordInput').value.trim();
@@ -33,51 +56,43 @@ async function findRhymes() {
         return;
     }
 
-    try {
-        // words.json கோப்பில் இருந்து தரவை எடுத்தல் (Cache தவிர்ப்பதற்காக ?v= விதியை இணைத்துள்ளோம்)
-        const response = await fetch('words.json?v=' + new Date().getTime());
-        const dictionary = await response.json();
+    // Google Sheet-இல் இருந்து சொற்களைப் பெறுகிறது
+    const dictionary = await fetchWordsFromGoogleSheet();
 
-        const firstChar = getFirstChar(inputWord);
-        const secondChar = getSecondChar(inputWord);
-        const lastChar = getLastChar(inputWord);
+    const firstChar = getFirstChar(inputWord);
+    const secondChar = getSecondChar(inputWord);
+    const lastChar = getLastChar(inputWord);
 
-        let edhugaiList = [];
-        let monaiList = [];
-        let iyaibuList = [];
+    let edhugaiList = [];
+    let monaiList = [];
+    let iyaibuList = [];
 
-        dictionary.forEach(word => {
-            // அதே சொல்லைத் தவிர்க்க
-            if (word.trim() === inputWord) return;
+    dictionary.forEach(word => {
+        if (word === inputWord) return;
 
-            const wFirst = getFirstChar(word);
-            const wSecond = getSecondChar(word);
-            const wLast = getLastChar(word);
+        const wFirst = getFirstChar(word);
+        const wSecond = getSecondChar(word);
+        const wLast = getLastChar(word);
 
-            // 1. எதுகை (இரண்டாம் எழுத்து பொருந்துவது)
-            if (secondChar && wSecond === secondChar) {
-                edhugaiList.push(word);
-            }
+        // 1. எதுகை
+        if (secondChar && wSecond === secondChar) {
+            edhugaiList.push(word);
+        }
 
-            // 2. மோனை (முதல் எழுத்து பொருந்துவது)
-            if (firstChar && wFirst === firstChar) {
-                monaiList.push(word);
-            }
+        // 2. மோனை
+        if (firstChar && wFirst === firstChar) {
+            monaiList.push(word);
+        }
 
-            // 3. இயைபு (கடைசி எழுத்து பொருந்துவது)
-            if (lastChar && wLast === lastChar) {
-                iyaibuList.push(word);
-            }
-        });
+        // 3. இயைபு
+        if (lastChar && wLast === lastChar) {
+            iyaibuList.push(word);
+        }
+    });
 
-        // முடிவுகளைத் திரையில் காட்டுதல்
-        renderTags('edhugaiTags', edhugaiList);
-        renderTags('monaiTags', monaiList);
-        renderTags('iyaibuTags', iyaibuList);
-
-    } catch (error) {
-        console.error("words.json கோப்பை வாசிப்பதில் பிழை:", error);
-    }
+    renderTags('edhugaiTags', edhugaiList);
+    renderTags('monaiTags', monaiList);
+    renderTags('iyaibuTags', iyaibuList);
 }
 
 function renderTags(elementId, words) {
@@ -89,7 +104,6 @@ function renderTags(elementId, words) {
         return;
     }
 
-    // ஒரே சொல் மீண்டும் வராமல் இருக்க (Unique words only)
     const uniqueWords = [...new Set(words)];
 
     uniqueWords.forEach(word => {
@@ -100,7 +114,6 @@ function renderTags(elementId, words) {
     });
 }
 
-// Enter Key அழுத்தினால் தேடும் வசதி
 document.getElementById('wordInput').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
         findRhymes();
